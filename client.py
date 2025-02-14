@@ -1,15 +1,22 @@
-#!/usr/bin/env python3
+# Description: This file contains the client-side code for the chat room application.
 import socket
 import threading
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
+
+def exit_request(client_socket, username, window):
+    client_socket.sendall(f"\n[+] The user {username} has left room chat\n\n".encode("utf-8"))  # Send exit message to server
+    client_socket.close()  # Close the socket
+    window.quit()  # Quit the Tkinter main loop
+    window.destroy()  # Destroy the Tkinter window
+
 
 def send_message(event, client_socket, texte_widget, entry_widget):
     message = entry_widget.get()  # Get the message from the entry widget
     if message:  # Check if the message is not empty
         client_socket.sendall(message.encode("utf-8"))  # Send the message to the server
         texte_widget.configure(state="normal")  # Enable text widget for editing
-        texte_widget.insert(END, f"You: {message}\n")  # Insert the message into the text widget
+        texte_widget.insert(END, f"\nYou: {message}\n\n")  # Insert the message into the text widget
         texte_widget.configure(state="disable")  # Disable text widget for editing
         entry_widget.delete(0, END)  # Clear the entry widget
 
@@ -43,6 +50,18 @@ def client_program():
     entry_widget = Entry(window, width=50)  # Create an Entry widget for user input
     entry_widget.bind("<Return>", lambda event: send_message(event, client_socket, texte_widget, entry_widget))  # Bind the Enter key to send_message function
     entry_widget.pack(padx=5, pady=5, fill=BOTH)  # Add padding around the widget
+
+    frame_widget = Frame(window)  # Create a Frame widget
+    frame_widget.pack(padx=5, pady=5, fill=BOTH)  # Add padding around the widget
+
+    buttom_widget = Button(frame_widget, text="Send", command=lambda: send_message(None, client_socket, texte_widget, entry_widget))  # Create a Button widget to send messages
+    buttom_widget.pack(side=RIGHT)  # Pack the widget to the right
+
+    user_widget = Label(frame_widget, text=f"Logged in as: {username}")  # Create a Label widget to display username
+    user_widget.pack(side=LEFT)  # Pack the widget to the left  
+
+    exit_widget = Button(frame_widget, text="Exit", command=lambda: exit_request(client_socket, username, window))  # Create a Button widget to exit the application
+    exit_widget.pack(side=RIGHT)  # Pack the widget to the right
 
     thread = threading.Thread(target=receive_messages, args=(client_socket, texte_widget))  # Create a thread to receive messages
     thread.daemon = True  # Set the thread as a daemon thread

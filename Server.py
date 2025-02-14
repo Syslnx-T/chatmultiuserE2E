@@ -12,8 +12,27 @@ def handle_client(conn, usernames, clients):
 
     for client in clients:
         if client != conn:
-            client.sendall(f"{usernames[conn]} has joined the chat room".encode("utf-8")) #send message to all clients that a new user has joined. 
+            client.sendall(f"[+]{usernames[conn]} has joined the chat room".encode("utf-8")) #send message to all clients that a new user has joined.
 
+     # Ifinite loop to receive messages from client
+    while True:
+        try:
+            message = conn.recv(1024) # Receive message from client
+            if message:
+                print(f"\n{usernames[conn]}: {message.decode('utf-8')}\n") # Print message to server
+                message_to_send = f"{usernames[conn]}: {message.decode('utf-8')}" # Create message to send to all clients
+
+                for client in clients:
+                    if client != conn:
+                        client.sendall(message_to_send.encode("utf-8")) # Send message to all clients
+        except Exception as e:
+            print(f"\nError receiving message: {e}")
+            clients.remove(conn)
+            for client in clients:
+                client.sendall(f"{usernames[conn]} has left the chat room".encode("utf-8")) # Send message to all clients that a user has left
+                conn.close()
+                clients.remove(conn)
+                
 
 
 
@@ -22,7 +41,7 @@ def server_program():
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #time wait socket reuse conector
     server_socket.bind((host, port))
     server_socket.listen(5)
-    print(f"\nServer started waiting for connections...")
+    print(f"\n[+] Server started waiting for connections...")
 
 
     clients = []
@@ -32,9 +51,9 @@ def server_program():
         conn, address = server_socket.accept()
         clients.append(conn)
 
-        print(f"\nConnection has been established | {address}")
+        print(f"\n[!] Connection has been established | {address}")
         
-        conn.send("Welcome to the chat room! ".encode("utf-8"))
+        conn.send(f"Welcome to the chat room!\n".encode("utf-8"))
         thread = threading.Thread(target=handle_client, args=(conn, usernames, clients))
         thread.daemon = True 
         thread.start()
